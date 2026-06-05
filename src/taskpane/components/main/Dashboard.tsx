@@ -1,7 +1,7 @@
 declare const Office: any;
 
 import React, { useEffect, useState } from "react";
-import { Box, Typography, IconButton, CircularProgress, Tooltip } from "@mui/material"; // Tooltip imported
+import { Box, Typography, IconButton, CircularProgress, Tooltip } from "@mui/material";
 import { Refresh } from "@mui/icons-material";
 import LinkComponent from "../linkComponent/LinkComponent";
 import ActiveConnections from "../activeConnections/ActiveConnections";
@@ -117,7 +117,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
             fontFamily: "Segoe UI, Arial",
           }}
         >
-          Version 1.0.0 Stable
+          Live Linker v1.0.0
         </Typography>
       </Box>
     </Box>
