@@ -1,7 +1,5 @@
 import axios from "axios";
-// Is line ko update karein:
 const API_BASE_URL = "https://live-link-backend.vercel.app/api/links";
-// const API_BASE_URL = "http://localhost:5000/api/links";
 
 const apiInstance = axios.create({
   baseURL: API_BASE_URL,
