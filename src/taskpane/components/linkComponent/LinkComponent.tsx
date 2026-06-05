@@ -214,11 +214,11 @@ const LinkComponent: React.FC<{ onLinkSuccess: () => void }> = ({ onLinkSuccess 
         <LinkIcon sx={{ color: "#0078d4", fontSize: 34, mb: 0.8 }} />
         <Typography
           sx={{
-            fontWeight: 700,
+            fontWeight: 800,
             fontSize: "17px",
-            color: "#805E5C",
+            color: "#323130",
             fontFamily: "Segoe UI, Arial",
-            letterSpacing: "0.3px",
+            letterSpacing: "0.3px"
           }}
         >
           Live Link
