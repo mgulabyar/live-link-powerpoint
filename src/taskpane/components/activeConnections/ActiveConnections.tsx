@@ -432,12 +432,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                         >
                           Sheet: {item.sheetName}
                         </Typography>
-                        <Box sx={{ bgcolor: "#E1DFDD", px: 0.8, py: 0.1, borderRadius: "3px" }}>
+                        <Box sx={{px: 0.8, py: 0.1, borderRadius: "3px" }}>
                           <Typography
                             sx={{
                               fontSize: "10.5px",
                               fontWeight: 700,
-                              color: "#323130",
+                              color: "#605E5C",
                               fontFamily: "Segoe UI, Arial",
                             }}
                           >
