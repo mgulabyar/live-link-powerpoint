@@ -71,8 +71,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
           EXCEL TO POWERPOINT
         </Typography>
 
-        {/* Integrated Clean & Professional Tooltip [1] */}
-        <Tooltip title="Refresh Links" arrow placement="bottom">
+        <Tooltip title="Refresh Data" arrow placement="bottom">
           <span>
             <IconButton
               onClick={loadPPTLinkedItems}
