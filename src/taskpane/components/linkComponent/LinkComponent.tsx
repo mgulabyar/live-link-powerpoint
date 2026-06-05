@@ -359,7 +359,6 @@
 
 // export default LinkComponent;
 
-
 /* global Office, PowerPoint */
 declare const Office: any;
 declare const PowerPoint: any;
@@ -572,23 +571,24 @@ const LinkComponent: React.FC<{ onLinkSuccess: () => void }> = ({ onLinkSuccess 
   };
 
   return (
-    <Box sx={{ px: 0.5 }}>
-      {/* Visual Title with clean, balanced typography directly on sidebar */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-        <LinkIcon sx={{ color: "#0078d4", fontSize: 20 }} />
+    <Box sx={{ px: 1 }}>
+      {/* Centered Vertical Logo & Header Area */}
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", mb: 3.5, mt: 1 }}>
+        <LinkIcon sx={{ color: "#0078d4", fontSize: 32, mb: 0.8 }} />
         <Typography
           sx={{
             fontWeight: 800,
-            fontSize: "14px",
+            fontSize: "17px",
             color: "#323130",
             fontFamily: "Segoe UI, Arial",
+            letterSpacing: "0.3px"
           }}
         >
-          LIVE DATA LINKING
+          Live Connection
         </Typography>
       </Box>
 
-      {/* Flat Box layout with no borders, shadows or paper cards [1] */}
+      {/* Flat Inputs flow stacked cleanly in a column */}
       <Box sx={{ display: "flex", flexDirection: "column", gap: 1.8 }}>
         <TextField
           select
