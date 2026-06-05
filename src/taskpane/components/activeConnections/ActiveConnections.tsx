@@ -2,13 +2,22 @@ declare const PowerPoint: any;
 declare const Office: any;
 
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Button, Paper, IconButton, List, CircularProgress, Alert } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  IconButton,
+  List,
+  CircularProgress,
+  Alert,
+} from "@mui/material";
 import { Refresh, Layers, Description, DeleteOutline } from "@mui/icons-material";
 import { getLinkDetails, getBulkLinkDetails, deleteLinkData } from "../services/api";
-import { deletePPTShape, PPTLinkedItem } from "../utils/officeHelpers"; 
+import { deletePPTShape, PPTLinkedItem } from "../utils/officeHelpers";
 interface ActiveConnectionsProps {
   pptLinks: PPTLinkedItem[];
-  onLinkSuccess: () => void | Promise<void>; 
+  onLinkSuccess: () => void | Promise<void>;
 }
 
 const truncateText = (text: string, maxLength: number): string => {
@@ -19,8 +28,11 @@ const truncateText = (text: string, maxLength: number): string => {
 const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkSuccess }) => {
   const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [globalUpdating, setGlobalUpdating] = useState<boolean>(false);
-  const [alertMessage, setAlertMessage] = useState<{ text: string; severity: "success" | "error" } | null>(null);
-  
+  const [alertMessage, setAlertMessage] = useState<{
+    text: string;
+    severity: "success" | "error";
+  } | null>(null);
+
   const [reachableIds, setReachableIds] = useState<Set<string>>(new Set());
 
   const safePptLinks = pptLinks || [];
@@ -62,7 +74,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       if (!response.success || !response.data) {
         throw new Error("Connection data not found in database.");
       }
-      
+
       const linkData = response.data;
       const rawBase64 = getRawBase64(linkData.dataSnapshot);
 
@@ -74,7 +86,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         let shapeUpdated = false;
         for (const slide of slides.items) {
           const shapes = slide.shapes;
-          shapes.load("items/id"); 
+          shapes.load("items/id");
           await context.sync();
 
           const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
@@ -134,7 +146,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       });
 
       setAlertMessage({ text: "Updated successfully!", severity: "success" });
-      onLinkSuccess(); 
+      onLinkSuccess();
     } catch (err: any) {
       console.error(err);
       setAlertMessage({ text: err.message || "Failed to update connection.", severity: "error" });
@@ -150,7 +162,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
     try {
       const linkIds = safePptLinks.map((item) => item.id);
-      
+
       const response = await getBulkLinkDetails(linkIds);
       if (!response.success || !response.data) {
         throw new Error("Failed to retrieve bulk updates.");
@@ -170,12 +182,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
         for (const slide of slides.items) {
           const shapes = slide.shapes;
-          shapes.load("items/id"); 
+          shapes.load("items/id");
           await context.sync();
 
           for (const item of safePptLinks) {
             const dbLink = dbLinksMap.get(item.id);
-            if (!dbLink) continue; 
+            if (!dbLink) continue;
 
             const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
             if (targetShape) {
@@ -232,46 +244,71 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         }
 
         await context.sync();
-        setAlertMessage({ text: `Successfully updated ${updatedCount} connections.`, severity: "success" });
+        setAlertMessage({
+          text: `Successfully updated ${updatedCount} connections.`,
+          severity: "success",
+        });
       });
 
-      onLinkSuccess(); 
+      onLinkSuccess();
     } catch (err: any) {
       console.error("Bulk update error:", err);
-      setAlertMessage({ text: err.message || "Failed to update bulk connections.", severity: "error" });
+      setAlertMessage({
+        text: err.message || "Failed to update bulk connections.",
+        severity: "error",
+      });
     } finally {
       setGlobalUpdating(false);
     }
   };
 
-
   const handleBreakPPTLink = async (shapeId: string, linkId: string) => {
     try {
-      await deletePPTShape(shapeId); 
-      await deleteLinkData(linkId); 
-      onLinkSuccess(); 
+      await deletePPTShape(shapeId);
+      await deleteLinkData(linkId);
+      onLinkSuccess();
     } catch (e) {
       console.error("Error breaking PPT link:", e);
     }
   };
-
 
   return (
     <Box sx={{ px: 0.5 }}>
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
           <Layers sx={{ fontSize: 16, color: "#605E5C" }} />
-          <Typography variant="caption" sx={{ fontWeight: 800, color: "#605E5C", fontFamily: "Segoe UI, Arial", fontSize: "11px" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 800,
+              color: "#605E5C",
+              fontFamily: "Segoe UI, Arial",
+              fontSize: "11px",
+            }}
+          >
             ACTIVE CONNECTIONS ({safePptLinks.length})
           </Typography>
         </Box>
         {safePptLinks.length > 0 && (
-          <Button 
-            size="small" 
+          <Button
+            size="small"
             disabled={globalUpdating}
-            startIcon={globalUpdating ? <CircularProgress size={10} color="inherit" /> : <Refresh sx={{ fontSize: 12 }} />} 
+            startIcon={
+              globalUpdating ? (
+                <CircularProgress size={10} color="inherit" />
+              ) : (
+                <Refresh sx={{ fontSize: 12 }} />
+              )
+            }
             onClick={handleUpdateAllLinks}
-            sx={{ fontSize: "11px", fontWeight: 700, p: 0, color: "#0078d4", textTransform: "none", fontFamily: "Segoe UI, Arial" }}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 700,
+              p: 0,
+              color: "#0078d4",
+              textTransform: "none",
+              fontFamily: "Segoe UI, Arial",
+            }}
           >
             Update All
           </Button>
@@ -279,7 +316,10 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       </Box>
 
       {alertMessage && (
-        <Alert severity={alertMessage.severity} sx={{ mb: 1.5, fontSize: "11px", fontFamily: "Segoe UI, Arial" }}>
+        <Alert
+          severity={alertMessage.severity}
+          sx={{ mb: 1.5, fontSize: "11px", fontFamily: "Segoe UI, Arial" }}
+        >
           {alertMessage.text}
         </Alert>
       )}
@@ -287,7 +327,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       <List sx={{ p: 0 }}>
         {safePptLinks.length > 0 ? (
           safePptLinks.map((item) => {
-            const isReachable = reachableIds.has(item.id); 
+            const isReachable = reachableIds.has(item.id);
 
             return (
               <Paper
@@ -295,7 +335,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 elevation={0}
                 sx={{
                   p: 1.5,
-                  mb: 1.2, 
+                  mb: 1.2,
                   border: "1px solid #EDEBE9",
                   borderRadius: "6px",
                   bgcolor: "#FAFAFA",
@@ -303,45 +343,88 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                   transition: "0.2s",
                 }}
               >
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 1,
+                  }}
+                >
                   <Box sx={{ display: "flex", gap: 1 }}>
                     <Description sx={{ fontSize: 18, color: "#0078d4", mt: 0.1 }} />
                     <Box>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.8 }}>
-                        <Box 
-                          sx={{ 
-                            width: 6, 
-                            height: 6, 
-                            bgcolor: isReachable ? "#107C10" : "#d32f2f", 
-                            borderRadius: "50%" 
-                          }} 
+                        <Box
+                          sx={{
+                            width: 6,
+                            height: 6,
+                            bgcolor: isReachable ? "#107C10" : "#d32f2f",
+                            borderRadius: "50%",
+                          }}
                         />
-                        <Typography sx={{ fontSize: "12px", fontWeight: 700, color: "#323130", lineHeight: 1.2, fontFamily: "Segoe UI, Arial" }}>
+                        <Typography
+                          sx={{
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: "#323130",
+                            lineHeight: 1.2,
+                            fontFamily: "Segoe UI, Arial",
+                          }}
+                        >
                           {item.type} Connection
                         </Typography>
                       </Box>
-                      
-                      <Typography sx={{ fontSize: "10.5px", color: "#605E5C", mt: 0.4, fontFamily: "Segoe UI, Arial" }}>
+
+                      <Typography
+                        sx={{
+                          fontSize: "10.5px",
+                          color: "#605E5C",
+                          mt: 0.4,
+                          fontFamily: "Segoe UI, Arial",
+                        }}
+                      >
                         File: {truncateText(item.excelFileName, 15)}
                       </Typography>
 
-                      <Box sx={{ display: "flex", gap: 0.8, mt: 0.6, flexWrap: "wrap", alignItems: "center" }}>
-                        <Typography sx={{ fontSize: "10.5px", color: "#605E5C", fontFamily: "Segoe UI, Arial" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          gap: 0.8,
+                          mt: 0.6,
+                          flexWrap: "wrap",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: "10.5px",
+                            color: "#605E5C",
+                            fontFamily: "Segoe UI, Arial",
+                          }}
+                        >
                           Sheet: {item.sheetName}
                         </Typography>
-                        <Box sx={{px: 0.8, py: 0.1, borderRadius: "3px" }}>
-                          <Typography sx={{ fontSize: "10.5px", fontWeight: 700, color: "#323130", fontFamily: "Segoe UI, Arial" }}>
+                        <Box sx={{ px: 0.8, py: 0.1, borderRadius: "3px" }}>
+                          <Typography
+                            sx={{
+                              fontSize: "10.5px",
+                              fontWeight: 700,
+                              color: "#323130",
+                              fontFamily: "Segoe UI, Arial",
+                            }}
+                          >
                             Range: {item.rangeAddress}
                           </Typography>
                         </Box>
                       </Box>
                     </Box>
                   </Box>
-                  <IconButton 
-                    size="small" 
-                    color="error" 
+                  <IconButton
+                    size="small"
+                    color="error"
                     disabled={refreshingId === item.id || globalUpdating}
-                    onClick={() => handleBreakPPTLink(item.shapeId, item.id)} 
+                    onClick={() => handleBreakPPTLink(item.shapeId, item.id)}
                     sx={{ p: 0.5 }}
                   >
                     <DeleteOutline sx={{ fontSize: 16 }} />
@@ -353,10 +436,16 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                   fullWidth
                   size="small"
                   disabled={refreshingId === item.id || globalUpdating || !isReachable}
-                  startIcon={refreshingId === item.id ? <CircularProgress size={14} color="inherit" /> : <Refresh sx={{ fontSize: 12 }} />}
+                  startIcon={
+                    refreshingId === item.id ? (
+                      <CircularProgress size={14} color="inherit" />
+                    ) : (
+                      <Refresh sx={{ fontSize: 12 }} />
+                    )
+                  }
                   onClick={() => handleRefreshLink(item)}
                   sx={{
-                    height: "28px", 
+                    height: "28px",
                     fontSize: "11px",
                     textTransform: "none",
                     fontWeight: 700,
@@ -373,7 +462,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
             );
           })
         ) : (
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1.5, fontFamily: "Segoe UI, Arial", fontSize: "11px" }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            align="center"
+            sx={{ mt: 1.5, fontFamily: "Segoe UI, Arial", fontSize: "11px" }}
+          >
             No active slide links detected.
           </Typography>
         )}
