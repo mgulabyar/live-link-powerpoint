@@ -351,7 +351,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       {hasLinks && (
         <List sx={{ p: 0 }}>
           {safePptLinks.map((item) => {
-            // Retrieve matched DB record dynamically to get the custom name [1]
             const dbItem = dbLinksMap.get(item.id);
             const isReachable = !!dbItem;
             const customComponentName = dbItem?.componentName || ""; 
@@ -381,7 +380,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                   <Box sx={{ display: "flex", gap: 1 }}>
                     <Description sx={{ fontSize: 18, color: "#0078d4", mt: 0.1 }} />
                     <Box>
-                      {/* PRIORITIZED: Display the custom componentName on card header, fallback to technical name [1] */}
                       <Typography
                         sx={{
                           fontSize: "12px",
@@ -394,7 +392,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                         {customComponentName || `${item.type} Connection`}
                       </Typography>
 
-                      {/* UNIFIED SINGLE-LINE METADATA FLOW WRAPPED IN A DENSE FLEXBOX ROW [5] */}
                       <Box
                         sx={{
                           display: "flex",
@@ -481,7 +478,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         </List>
       )}
 
-      {/* DYNAMIC AUTO-DISSOLVING 2-SECOND BOTTOM TOAST [1] */}
       <Snackbar
         open={alertMessage !== null}
         autoHideDuration={2000} 

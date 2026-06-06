@@ -1,132 +1,3 @@
-// declare const Office: any;
-
-// import React, { useEffect, useState } from "react";
-// import { Box, Typography, IconButton, CircularProgress, Tooltip } from "@mui/material";
-// import { Refresh } from "@mui/icons-material";
-// import LinkComponent from "../linkComponent/LinkComponent";
-// import ActiveConnections from "../activeConnections/ActiveConnections";
-// import { getPPTLinkedItems, PPTLinkedItem } from "../utils/officeHelpers";
-
-// interface DashboardProps {
-//   onLogout: () => void;
-// }
-
-// const LinkComponentSafe = LinkComponent as any;
-// const ActiveConnectionsSafe = ActiveConnections as any;
-
-// const Dashboard: React.FC<DashboardProps> = () => {
-//   const [pptLinks, setPptLinks] = useState<PPTLinkedItem[]>([]);
-//   const [resolvingFile, setResolvingFile] = useState<boolean>(true);
-
-//   useEffect(() => {
-//     loadPPTLinkedItems();
-//   }, []);
-
-//   const loadPPTLinkedItems = async () => {
-//     setResolvingFile(true);
-//     try {
-//       const items = await getPPTLinkedItems();
-//       setPptLinks(items);
-//     } catch (e) {
-//       console.error("Failed to load PPT linked items:", e);
-//     } finally {
-//       setResolvingFile(false);
-//     }
-//   };
-
-//   return (
-//     <Box
-//       sx={{
-//         height: "100vh",
-//         display: "flex",
-//         flexDirection: "column",
-//         bgcolor: "#FFFFFF",
-//         fontFamily: "Segoe UI, Arial, sans-serif",
-//         overflow: "hidden",
-//       }}
-//     >
-//       <Box
-//         sx={{
-//           position: "sticky",
-//           top: 0,
-//           zIndex: 100,
-//           p: 2,
-//           bgcolor: "#0078d4",
-//           color: "#FFFFFF",
-//           display: "flex",
-//           alignItems: "center",
-//           justifyContent: "space-between",
-//         }}
-//       >
-//         <Box sx={{ width: 32 }} />
-//         <Typography
-//           sx={{
-//             fontWeight: 700,
-//             fontSize: "16px",
-//             letterSpacing: "0.5px",
-//             fontFamily: "Segoe UI, Arial",
-//             textAlign: "center",
-//           }}
-//         >
-//           EXCEL TO POWERPOINT
-//         </Typography>
-
-//         <Tooltip title="Refresh Data" arrow placement="bottom">
-//           <span>
-//             <IconButton
-//               onClick={loadPPTLinkedItems}
-//               size="small"
-//               sx={{ color: "#FFFFFF" }}
-//               disabled={resolvingFile}
-//             >
-//               {resolvingFile ? (
-//                 <CircularProgress size={18} sx={{ color: "#FFFFFF" }} />
-//               ) : (
-//                 <Refresh sx={{ fontSize: 20 }} />
-//               )}
-//             </IconButton>
-//           </span>
-//         </Tooltip>
-//       </Box>
-
-//       <Box
-//         sx={{
-//           p: 2,
-//           flex: 1,
-//           overflowY: "auto",
-//           display: "flex",
-//           flexDirection: "column",
-//           gap: 2,
-//           maxHeight: "95vh",
-//           "&::-webkit-scrollbar": { display: "none" },
-//           msOverflowStyle: "none",
-//           scrollbarWidth: "none",
-//         }}
-//       >
-//         <LinkComponentSafe onLinkSuccess={loadPPTLinkedItems} />
-
-//         <ActiveConnectionsSafe pptLinks={pptLinks} onLinkSuccess={loadPPTLinkedItems} />
-//       </Box>
-
-//       <Box sx={{ p: 1.5, textAlign: "center", borderTop: "1px solid #EDEBE9" }}>
-//         <Typography
-//           sx={{
-//             fontSize: "10px",
-//             color: "#A19F9D",
-//             fontWeight: 600,
-//             fontFamily: "Segoe UI, Arial",
-//           }}
-//         >
-//           Live Linker v1.0.0
-//         </Typography>
-//       </Box>
-//     </Box>
-//   );
-// };
-
-// export default Dashboard;
-
-
 declare const Office: any;
 
 import React, { useEffect, useState } from "react";
@@ -134,7 +5,7 @@ import { Box, Typography, IconButton, CircularProgress, Tooltip } from "@mui/mat
 import { Refresh } from "@mui/icons-material";
 import LinkComponent from "../linkComponent/LinkComponent";
 import ActiveConnections from "../activeConnections/ActiveConnections";
-import { getPPTLinkedItems, PPTLinkedItem } from "../utils/officeHelpers"; // Path maintained exactly as your imports
+import { getPPTLinkedItems, PPTLinkedItem } from "../utils/officeHelpers"; 
 
 interface DashboardProps {
   onLogout: () => void;
@@ -163,7 +34,6 @@ const Dashboard: React.FC<DashboardProps> = () => {
     }
   };
 
-  // Performs a clean browser-level reload of the entire taskpane [1]
   const handleFullReload = () => {
     window.location.reload();
   };
@@ -205,11 +75,11 @@ const Dashboard: React.FC<DashboardProps> = () => {
           EXCEL TO POWERPOINT
         </Typography>
 
-        {/* Clean dynamic tooltip with full taskpane reload execution [1] */}
+       
         <Tooltip title="Refresh Data" arrow placement="bottom">
           <span>
             <IconButton
-              onClick={handleFullReload} // Triggers total page reload on click [1]
+              onClick={handleFullReload} 
               size="small"
               sx={{ color: "#FFFFFF" }}
               disabled={resolvingFile}
