@@ -372,7 +372,7 @@ import {
   Snackbar, 
 } from "@mui/material";
 import { Link as LinkIcon, AddBox } from "@mui/icons-material";
-import { getDistinctWorkbooks, getLinksByWorkbook } from "../services/api"; // Path retained as per taskpane structure
+import { getDistinctWorkbooks, getLinksByWorkbook } from "../services/api"; 
 
 interface ExcelComponent {
   id: string;
