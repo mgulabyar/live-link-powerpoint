@@ -1,3 +1,5 @@
+
+// /* global Office, PowerPoint */
 // declare const Office: any;
 // declare const PowerPoint: any;
 
@@ -10,6 +12,7 @@
 //   TextField,
 //   CircularProgress,
 //   Alert,
+//   Snackbar, 
 // } from "@mui/material";
 // import { Link as LinkIcon, AddBox } from "@mui/icons-material";
 // import { getDistinctWorkbooks, getLinksByWorkbook } from "../services/api";
@@ -327,16 +330,25 @@
 //         >
 //           {loading ? "Linking..." : "Insert Link to Slide"}
 //         </Button>
+//       </Box>
 
-//         {statusMessage && (
+//       {/* DYNAMIC AUTO-DISSOLVING 2-SECOND BOTTOM TOAST [1] */}
+//       <Snackbar
+//         open={statusMessage !== null}
+//         autoHideDuration={2000} // Automatically disappears after 2 seconds! [1]
+//         onClose={() => setStatusMessage(null)}
+//         anchorOrigin={{ vertical: "bottom", horizontal: "center" }} // Placed beautifully at the bottom center [1]
+//       >
+//         {statusMessage ? (
 //           <Alert
+//             onClose={() => setStatusMessage(null)}
 //             severity={statusMessage.severity}
-//             sx={{ mt: 1, fontSize: "11px", fontFamily: "Segoe UI, Arial", textAlign: "left" }}
+//             sx={{ width: "100%", fontSize: "13px", fontFamily: "Segoe UI, Arial" }}
 //           >
 //             {statusMessage.text}
 //           </Alert>
-//         )}
-//       </Box>
+//         ) : undefined}
+//       </Snackbar>
 //     </Box>
 //   );
 // };
@@ -360,7 +372,7 @@ import {
   Snackbar, 
 } from "@mui/material";
 import { Link as LinkIcon, AddBox } from "@mui/icons-material";
-import { getDistinctWorkbooks, getLinksByWorkbook } from "../services/api";
+import { getDistinctWorkbooks, getLinksByWorkbook } from "../services/api"; // Path retained as per taskpane structure
 
 interface ExcelComponent {
   id: string;
@@ -449,7 +461,8 @@ const LinkComponent: React.FC<{ onLinkSuccess: () => void }> = ({ onLinkSuccess 
         setExcelComponents(
           res.data.map((item: any) => ({
             id: item.linkId,
-            name: `${item.type} on [${item.sheetName}] (${item.rangeAddress})`,
+            // PRIORITIZED: Display the custom componentName from Excel, fallback to technical address [1]
+            name: item.componentName || `${item.type} on [${item.sheetName}] (${item.rangeAddress})`,
             sheetName: item.sheetName,
             rangeAddress: item.rangeAddress,
             type: item.type,
@@ -677,12 +690,11 @@ const LinkComponent: React.FC<{ onLinkSuccess: () => void }> = ({ onLinkSuccess 
         </Button>
       </Box>
 
-      {/* DYNAMIC AUTO-DISSOLVING 2-SECOND BOTTOM TOAST [1] */}
       <Snackbar
         open={statusMessage !== null}
-        autoHideDuration={2000} // Automatically disappears after 2 seconds! [1]
+        autoHideDuration={2000} 
         onClose={() => setStatusMessage(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }} // Placed beautifully at the bottom center [1]
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }} 
       >
         {statusMessage ? (
           <Alert
