@@ -1320,7 +1320,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     }
   };
 
-  
+
   const handleUpdateAllLinks = async () => {
     if (safePptLinks.length === 0) return;
     setGlobalUpdating(true);
@@ -1620,7 +1620,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                               fontFamily: "Segoe UI, Arial",
                             }}
                           >
-                            Range: {item.rangeAddress}
+                            range: {item.rangeAddress}
                           </Typography>
                         </Box>
                       </Box>
