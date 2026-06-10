@@ -139,7 +139,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
             }
           }
         }
-        if (!shapeUpdated) throw new Error("Linked shape not found on current slide.");
+        if (!shapeUpdated) throw new Error("");
       });
 
       setAlertMessage({ text: "Updated successfully!", severity: "success" });
