@@ -609,7 +609,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 { coercionType: Office.CoercionType.Image },
                 (asyncResult: any) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                    reject(new Error(asyncResult.error.message));
+                    reject(new Error(""));
                   } else {
                     resolve();
                   }
@@ -714,7 +714,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                   { coercionType: Office.CoercionType.Image },
                   (asyncResult: any) => {
                     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                      reject(new Error(asyncResult.error.message));
+                      reject(new Error(""));
                     } else {
                       resolve();
                     }
