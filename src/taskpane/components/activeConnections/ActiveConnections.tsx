@@ -564,21 +564,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     return base64String;
   };
 
-  // UPDATED: Single Refresh logic jahan navigation aur safe deletion add ki hai
+  // UPDATED: Safe update loop - Pehle position nikalna, delete karna, selection reset karna, aur paste karna.
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
 
     try {
-      // 1. Pehle us slide par jump karenge jahan ye table maujuda hai (Shape not found error hal karega)
-      if (item.slideId) {
-        await new Promise<void>((resolve) => {
-          Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
-            resolve();
-          });
-        });
-      }
-
       const response = await getLinkDetails(item.id);
       if (!response.success || !response.data) {
         throw new Error("Connection data not found in database.");
@@ -588,13 +579,11 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       const rawBase64 = getRawBase64(linkData.dataSnapshot);
 
       await PowerPoint.run(async (context: any) => {
-        // Presentation ki tamaam slides ko load karenge taake focus slide tak mehdood na ho
         const slides = context.presentation.slides;
         slides.load("items");
         await context.sync();
 
         let shapeUpdated = false;
-        let shapeToDelete: any = null;
         let targetShapeProperties = { left: 0, top: 0, width: 100, height: 100 };
 
         for (const slide of slides.items) {
@@ -604,7 +593,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
           const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
           if (targetShape) {
-            // Target shape ki position aur size coordinates nikalenge
+            // 1. Purane shape ke coordinates note karna
             targetShape.load(["left", "top", "width", "height"]);
             await context.sync();
 
@@ -615,11 +604,22 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               height: targetShape.height,
             };
 
-            shapeToDelete = targetShape;
+            // 2. Shape delete karna (Taake selected active image ka selection clear ho sake)
+            targetShape.delete();
+            await context.sync();
+
+            // 3. Slide navigation ke zariye PowerPoint Web ki selection focus Slide Canvas par reset karna
+            // Is se 'Cannot write to selection' ka bug hamesha ke liye khatam ho jayega.
+            if (item.slideId) {
+              await new Promise<void>((resolve) => {
+                Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
+                  resolve();
+                });
+              });
+            }
 
             const existingIds = new Set(shapes.items.map((s: any) => s.id));
 
-            // Naye image ke options mein wahi coordinates pass karenge taake position shift na ho
             const insertOptions: any = {
               coercionType: Office.CoercionType.Image,
               imageLeft: targetShapeProperties.left,
@@ -628,7 +628,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               imageHeight: targetShapeProperties.height,
             };
 
-            // Purane shape ko delete karne se PEHLE naya image insert karenge (Cannot write selection error door karega)
+            // 4. Clean selection par naye data ko paste karna
             await new Promise<void>((resolve, reject) => {
               Office.context.document.setSelectedDataAsync(
                 rawBase64,
@@ -649,7 +649,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
             const newImage = updatedShapes.items.find((s: any) => !existingIds.has(s.id));
             if (newImage) {
-              // Exact size and position lock karna
               newImage.left = targetShapeProperties.left;
               newImage.top = targetShapeProperties.top;
               newImage.width = targetShapeProperties.width;
@@ -662,10 +661,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               newImage.tags.add("EXCEL_RANGE_ADDRESS", item.rangeAddress);
               newImage.tags.add("TYPE", item.type);
 
-              // Naye table ke aane ke baad purane table ko delete karna
-              shapeToDelete.delete();
               await context.sync();
-              
               shapeUpdated = true;
               break;
             } else {
@@ -686,7 +682,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     }
   };
 
-  // UPDATED: "Update All" bulk update logic mein bhi position aur selection checks lagaye hain
+  // UPDATED: Bulk Update (Update All) logic with selection reset and safe overwrite
   const handleUpdateAllLinks = async () => {
     if (safePptLinks.length === 0) return;
     setGlobalUpdating(true);
@@ -733,7 +729,13 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 height: targetShape.height,
               };
 
-              // Go to slide dynamically to ensure smooth write operations
+              const existingIds = new Set(shapes.items.map((s: any) => s.id));
+
+              // 1. Delete target shape
+              targetShape.delete();
+              await context.sync();
+
+              // 2. Slide Navigation focus reset
               if (item.slideId) {
                 await new Promise<void>((resolve) => {
                   Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
@@ -742,7 +744,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 });
               }
 
-              const existingIds = new Set(shapes.items.map((s: any) => s.id));
               const rawBase64 = getRawBase64(dbLink.dataSnapshot);
 
               const insertOptions = {
@@ -753,6 +754,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 imageHeight: targetShapeProperties.height,
               };
 
+              // 3. Paste image safely
               await new Promise<void>((resolve, reject) => {
                 Office.context.document.setSelectedDataAsync(
                   rawBase64,
@@ -785,7 +787,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 newImage.tags.add("EXCEL_RANGE_ADDRESS", item.rangeAddress);
                 newImage.tags.add("TYPE", item.type);
 
-                targetShape.delete(); // Safe deletion
                 updatedCount++;
                 await context.sync();
               }
