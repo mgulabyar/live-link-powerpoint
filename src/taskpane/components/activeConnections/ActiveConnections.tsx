@@ -862,14 +862,14 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         </Box>
       )}
 
-      {alertMessage && hasLinks && (
+      {/* {alertMessage && hasLinks && (
         <Alert
           severity={alertMessage.severity}
           sx={{ mb: 1.5, fontSize: "11px", fontFamily: "Segoe UI, Arial" }}
         >
           {alertMessage.text}
         </Alert>
-      )}
+      )} */}
 
       {hasLinks && (
         <List sx={{ p: 0 }}>
