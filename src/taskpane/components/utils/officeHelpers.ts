@@ -135,12 +135,13 @@
 // };
 
 
+
 declare const PowerPoint: any;
 
 export interface PPTLinkedItem {
   id: string;
   shapeId: string;
-  slideId: string; // Dynamic slide tracking ke liye property add ki hai
+  slideId: string; // Dynamic slide tracking
   excelFileId: string;
   excelFileName: string;
   sheetName: string;
@@ -158,7 +159,7 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
     const linkedItems: PPTLinkedItem[] = [];
 
     for (const slide of slides.items) {
-      slide.load("id"); // Slide ID ko load kiya taake sidebar inactive slides ke images track kare
+      slide.load("id");
       await context.sync();
 
       const shapes = slide.shapes;
@@ -166,7 +167,8 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
       await context.sync();
 
       for (const shape of shapes.items) {
-        shape.tags.load("items");
+        // UPDATED: key aur value ko explicitly load karwaya hai taake reload par list khali (0) na dikhe
+        shape.tags.load("key,value"); 
       }
 
       try {
@@ -209,7 +211,7 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
           linkedItems.push({
             id: linkId,
             shapeId: shape.id,
-            slideId: slide.id, // Store loaded slide ID [1]
+            slideId: slide.id, // slideId trace lock
             excelFileId,
             excelFileName,
             sheetName,

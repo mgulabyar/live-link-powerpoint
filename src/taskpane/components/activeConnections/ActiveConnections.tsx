@@ -1088,13 +1088,13 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     return base64String;
   };
 
-  // UPDATED: Single Refresh logic (Slide navigation + Size and position preservation)
+  // UPDATED: Dynamic slide navigation, current position lock, and silent error handler
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
 
     try {
-      // 1. Target slide par switch karna aur selection reset karna (Cannot write selection error hal karega)
+      // 1. Inactive slide se active slide par switch karna (Slide jumping fix)
       if (item.slideId) {
         await new Promise<void>((resolve) => {
           Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
@@ -1117,7 +1117,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         slides.load("items");
         await context.sync();
 
-        // Target slide ko direct locate karna bina irrelevant slides ko scan kiye
+        // Target slide locate karna
         const targetSlide = slides.items.find((s: any) => s.id === item.slideId);
         if (targetSlide) {
           const shapes = targetSlide.shapes;
@@ -1126,7 +1126,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
           const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
           if (targetShape) {
-            // Live moved position aur width/height load karna taake size aur position vapis default na ho
+            // Live size aur position coordinates load karna taake corner drag lock ho sake
             targetShape.load(["left", "top", "width", "height"]);
             await context.sync();
 
@@ -1143,7 +1143,16 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
             targetShape.delete();
             await context.sync();
 
-            // Options mein size aur positions pass karna
+            // 2. Clear focus conflict: PowerPoint Online selection canvas par reset karna
+            if (item.slideId) {
+              await new Promise<void>((resolve) => {
+                Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
+                  resolve();
+                });
+              });
+            }
+
+            // Options mein size aur positions inject karna
             const insertOptions = {
               coercionType: Office.CoercionType.Image,
               imageLeft: targetShapeProperties.left,
@@ -1152,11 +1161,10 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               imageHeight: targetShapeProperties.height,
             };
 
-            // Image safely write/paste karna
             await new Promise<void>((resolve, reject) => {
               Office.context.document.setSelectedDataAsync(
                 rawBase64,
-                insertOptions,
+                insertOptions, // Exact properties mapping
                 (asyncResult: any) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                     reject(new Error(""));
@@ -1197,18 +1205,16 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       if (shapeUpdated) {
         setAlertMessage({ text: "Updated successfully!", severity: "success" });
         onLinkSuccess();
-      } else {
-        console.warn("[SILENT EXCEL SYNC] Linked shape was already deleted from slide.");
       }
     } catch (err: any) {
-      // UPDATED: "or ye toast jo error waly aty ha ye khatam kro" - Error toasts ko bilkul khamosh kar diya gaya hai
-      console.log("[SILENT EXCEL RUN ERROR]:", err.message || err);
+      // "or ye toast jo error waly aty ha ye khatam kro" - Error alerts ko UI par show karna band kar diya hai
+      console.log("[SILENT HANDLER] Refresh failed silently:", err.message || err);
     } finally {
       setRefreshingId(null);
     }
   };
 
-  // UPDATED: Bulk Update (Update All) logic (Slide-switching and position locking)
+  // UPDATED: Bulk Update (Update All) with slide selection reset, coordinates lock, and silent errors
   const handleUpdateAllLinks = async () => {
     if (safePptLinks.length === 0) return;
     setGlobalUpdating(true);
@@ -1258,7 +1264,9 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
               const existingIds = new Set(shapes.items.map((s: any) => s.id));
 
-              // Auto-navigate to correct slide during bulk update to clear focus conflicts
+              targetShape.delete();
+              await context.sync();
+
               if (item.slideId) {
                 await new Promise<void>((resolve) => {
                   Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
@@ -1266,9 +1274,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                   });
                 });
               }
-
-              targetShape.delete();
-              await context.sync();
 
               const rawBase64 = getRawBase64(dbLink.dataSnapshot);
 
@@ -1331,8 +1336,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
       onLinkSuccess();
     } catch (err: any) {
-      // Dynamic bulk error silently caught to clean up user screen
-      console.log("[SILENT BULK ERROR]:", err.message || err);
+      console.log("[SILENT BULK HANDLER] Suppressed error:", err.message || err);
     } finally {
       setGlobalUpdating(false);
     }
