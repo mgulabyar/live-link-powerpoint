@@ -136,13 +136,12 @@
 
 
 
-/* global PowerPoint */
+declare const PowerPoint: any;
 
-declare const PowerPoint:any;
 export interface PPTLinkedItem {
   id: string;
   shapeId: string;
-  slideId: string; 
+  slideId: string; // Dynamic slide tracking
   excelFileId: string;
   excelFileName: string;
   sheetName: string;
@@ -168,8 +167,8 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
       await context.sync();
 
       for (const shape of shapes.items) {
-        // FIXED: Replaced invalid "key,value" load with standard "items" load to prevent silent crashes [1]
-        shape.tags.load("items"); 
+        // UPDATED: key aur value ko explicitly load karwaya hai taake reload par list khali (0) na dikhe
+        shape.tags.load("key,value"); 
       }
 
       try {
@@ -212,7 +211,7 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
           linkedItems.push({
             id: linkId,
             shapeId: shape.id,
-            slideId: slide.id, 
+            slideId: slide.id, // slideId trace lock
             excelFileId,
             excelFileName,
             sheetName,
