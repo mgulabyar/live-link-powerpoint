@@ -1191,7 +1191,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
   //   }
   // };
 
-
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
@@ -1620,7 +1619,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                               fontFamily: "Segoe UI, Arial",
                             }}
                           >
-                            range: {item.rangeAddress}
+                            Range: {item.rangeAddress}
                           </Typography>
                         </Box>
                       </Box>
