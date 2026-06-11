@@ -134,11 +134,13 @@
 //   });
 // };
 
-/* global PowerPoint */
-declare const PowerPoint:any
+
+declare const PowerPoint: any;
+
 export interface PPTLinkedItem {
   id: string;
   shapeId: string;
+  slideId: string; // Dynamic slide tracking ke liye property add ki hai
   excelFileId: string;
   excelFileName: string;
   sheetName: string;
@@ -150,15 +152,31 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
   return await PowerPoint.run(async (context: any) => {
     const presentation = context.presentation;
     const slides = presentation.slides;
-    
-    // Deep load all slides, nested shapes, and their tags in a single optimized DB query [1]
-    slides.load("items/id,items/shapes/items/id,items/shapes/items/tags/items");
+    slides.load("items");
     await context.sync();
 
     const linkedItems: PPTLinkedItem[] = [];
 
     for (const slide of slides.items) {
-      for (const shape of slide.shapes.items) {
+      slide.load("id"); // Slide ID ko load kiya taake sidebar inactive slides ke images track kare
+      await context.sync();
+
+      const shapes = slide.shapes;
+      shapes.load("items/id");
+      await context.sync();
+
+      for (const shape of shapes.items) {
+        shape.tags.load("items");
+      }
+
+      try {
+        await context.sync();
+      } catch (err) {
+        console.error("Failed to load shape tags resiliently:", err);
+        continue;
+      }
+
+      for (const shape of shapes.items) {
         const tags = shape.tags;
         if (!tags || !tags.items) continue;
 
@@ -191,6 +209,7 @@ export const getPPTLinkedItems = async (): Promise<PPTLinkedItem[]> => {
           linkedItems.push({
             id: linkId,
             shapeId: shape.id,
+            slideId: slide.id, // Store loaded slide ID [1]
             excelFileId,
             excelFileName,
             sheetName,

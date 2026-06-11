@@ -1025,7 +1025,6 @@
 
 
 
-
 declare const PowerPoint: any;
 declare const Office: any;
 
@@ -1089,11 +1088,21 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     return base64String;
   };
 
+  // UPDATED: Single Refresh logic (Slide navigation + Size and position preservation)
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
 
     try {
+      // 1. Target slide par switch karna aur selection reset karna (Cannot write selection error hal karega)
+      if (item.slideId) {
+        await new Promise<void>((resolve) => {
+          Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
+            resolve();
+          });
+        });
+      }
+
       const response = await getLinkDetails(item.id);
       if (!response.success || !response.data) {
         throw new Error("Connection data not found in database.");
@@ -1104,43 +1113,50 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       let shapeUpdated = false;
 
       await PowerPoint.run(async (context: any) => {
-        // FIXED: Scans all presentation slides [1]
         const slides = context.presentation.slides;
-        slides.load("items/id");
+        slides.load("items");
         await context.sync();
 
-        for (const slide of slides.items) {
-          const shapes = slide.shapes;
+        // Target slide ko direct locate karna bina irrelevant slides ko scan kiye
+        const targetSlide = slides.items.find((s: any) => s.id === item.slideId);
+        if (targetSlide) {
+          const shapes = targetSlide.shapes;
           shapes.load("items/id");
           await context.sync();
 
           const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
           if (targetShape) {
-            targetShape.load(["left", "top"]);
+            // Live moved position aur width/height load karna taake size aur position vapis default na ho
+            targetShape.load(["left", "top", "width", "height"]);
             await context.sync();
 
             const targetShapeProperties = {
               left: targetShape.left,
               top: targetShape.top,
+              width: targetShape.width,
+              height: targetShape.height,
             };
-
-            // FIXED: Programmatically focus and navigate to the target slide before insert [1]
-            await new Promise<void>((resolve, reject) => {
-              Office.context.document.goToByIdAsync(slide.id, Office.GoToType.Slide, (res: any) => {
-                if (res.status === Office.AsyncResultStatus.Failed) reject(new Error(res.error.message));
-                else resolve();
-              });
-            });
 
             const existingIds = new Set(shapes.items.map((s: any) => s.id));
 
+            // Shape delete karna
             targetShape.delete();
             await context.sync();
 
+            // Options mein size aur positions pass karna
+            const insertOptions = {
+              coercionType: Office.CoercionType.Image,
+              imageLeft: targetShapeProperties.left,
+              imageTop: targetShapeProperties.top,
+              imageWidth: targetShapeProperties.width,
+              imageHeight: targetShapeProperties.height,
+            };
+
+            // Image safely write/paste karna
             await new Promise<void>((resolve, reject) => {
               Office.context.document.setSelectedDataAsync(
                 rawBase64,
-                { coercionType: Office.CoercionType.Image },
+                insertOptions,
                 (asyncResult: any) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                     reject(new Error(""));
@@ -1151,15 +1167,16 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               );
             });
 
-            const updatedShapes = slide.shapes;
+            const updatedShapes = targetSlide.shapes;
             updatedShapes.load("items/id");
             await context.sync();
 
             const newImage = updatedShapes.items.find((s: any) => !existingIds.has(s.id));
             if (newImage) {
-              // Exact coordinates retained [1]
               newImage.left = targetShapeProperties.left;
               newImage.top = targetShapeProperties.top;
+              newImage.width = targetShapeProperties.width;
+              newImage.height = targetShapeProperties.height;
 
               newImage.tags.add("LIVE_LINK_ID", item.id);
               newImage.tags.add("EXCEL_FILE_ID", item.excelFileId);
@@ -1170,7 +1187,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
               await context.sync();
               shapeUpdated = true;
-              break;
             } else {
               throw new Error("Failed to detect refreshed shape.");
             }
@@ -1185,13 +1201,14 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         console.warn("[SILENT EXCEL SYNC] Linked shape was already deleted from slide.");
       }
     } catch (err: any) {
-      console.error(err);
-      setAlertMessage({ text: err.message || "Failed to update connection.", severity: "error" });
+      // UPDATED: "or ye toast jo error waly aty ha ye khatam kro" - Error toasts ko bilkul khamosh kar diya gaya hai
+      console.log("[SILENT EXCEL RUN ERROR]:", err.message || err);
     } finally {
       setRefreshingId(null);
     }
   };
 
+  // UPDATED: Bulk Update (Update All) logic (Slide-switching and position locking)
   const handleUpdateAllLinks = async () => {
     if (safePptLinks.length === 0) return;
     setGlobalUpdating(true);
@@ -1211,51 +1228,62 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       });
 
       await PowerPoint.run(async (context: any) => {
-        // FIXED: Scans all presentation slides [1]
         const slides = context.presentation.slides;
-        slides.load("items/id");
+        slides.load("items");
         await context.sync();
 
         let updatedCount = 0;
 
-        for (const slide of slides.items) {
-          const shapes = slide.shapes;
-          shapes.load("items/id");
-          await context.sync();
+        for (const item of safePptLinks) {
+          const dbLink = dbLinksMapLocal.get(item.id);
+          if (!dbLink) continue;
 
-          for (const item of safePptLinks) {
-            const dbLink = dbLinksMapLocal.get(item.id);
-            if (!dbLink) continue;
+          const targetSlide = slides.items.find((s: any) => s.id === item.slideId);
+          if (targetSlide) {
+            const shapes = targetSlide.shapes;
+            shapes.load("items/id");
+            await context.sync();
 
             const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
             if (targetShape) {
-              targetShape.load(["left", "top"]);
+              targetShape.load(["left", "top", "width", "height"]);
               await context.sync();
 
               const targetShapeProperties = {
                 left: targetShape.left,
                 top: targetShape.top,
+                width: targetShape.width,
+                height: targetShape.height,
               };
 
-              // FIXED: Programmatically focus and navigate to the target slide before insert [1]
-              await new Promise<void>((resolve, reject) => {
-                Office.context.document.goToByIdAsync(slide.id, Office.GoToType.Slide, (res: any) => {
-                  if (res.status === Office.AsyncResultStatus.Failed) reject(new Error(res.error.message));
-                  else resolve();
-                });
-              });
-
               const existingIds = new Set(shapes.items.map((s: any) => s.id));
+
+              // Auto-navigate to correct slide during bulk update to clear focus conflicts
+              if (item.slideId) {
+                await new Promise<void>((resolve) => {
+                  Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
+                    resolve();
+                  });
+                });
+              }
 
               targetShape.delete();
               await context.sync();
 
               const rawBase64 = getRawBase64(dbLink.dataSnapshot);
 
+              const insertOptions = {
+                coercionType: Office.CoercionType.Image,
+                imageLeft: targetShapeProperties.left,
+                imageTop: targetShapeProperties.top,
+                imageWidth: targetShapeProperties.width,
+                imageHeight: targetShapeProperties.height,
+              };
+
               await new Promise<void>((resolve, reject) => {
                 Office.context.document.setSelectedDataAsync(
                   rawBase64,
-                  { coercionType: Office.CoercionType.Image },
+                  insertOptions,
                   (asyncResult: any) => {
                     if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                       reject(new Error(""));
@@ -1266,7 +1294,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 );
               });
 
-              const updatedShapes = slide.shapes;
+              const updatedShapes = targetSlide.shapes;
               updatedShapes.load("items/id");
               await context.sync();
 
@@ -1274,6 +1302,8 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               if (newImage) {
                 newImage.left = targetShapeProperties.left;
                 newImage.top = targetShapeProperties.top;
+                newImage.width = targetShapeProperties.width;
+                newImage.height = targetShapeProperties.height;
 
                 newImage.tags.add("LIVE_LINK_ID", item.id);
                 newImage.tags.add("EXCEL_FILE_ID", item.excelFileId);
@@ -1296,18 +1326,13 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
             text: `Successfully updated ${updatedCount} connections.`,
             severity: "success",
           });
-        } else {
-          console.log("[DEBUG] Bulk update complete. 0 shapes were found/updated.");
         }
       });
 
       onLinkSuccess();
     } catch (err: any) {
-      console.error("Bulk update error:", err);
-      setAlertMessage({
-        text: err.message || "Failed to update bulk connections.",
-        severity: "error",
-      });
+      // Dynamic bulk error silently caught to clean up user screen
+      console.log("[SILENT BULK ERROR]:", err.message || err);
     } finally {
       setGlobalUpdating(false);
     }
@@ -1486,7 +1511,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                           <Typography
                             sx={{
                               fontSize: "10.5px",
-                              fontWeight: 700,
+                              fontWeight: 600,
                               color: "#323130",
                               fontFamily: "Segoe UI, Arial",
                             }}
@@ -1541,7 +1566,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         </List>
       )}
 
-      {/* DYNAMIC AUTO-DISSOLVING 2-SECOND BOTTOM TOAST [1] */}
       <Snackbar
         open={alertMessage !== null}
         autoHideDuration={2000} 
@@ -1563,4 +1587,3 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 };
 
 export default ActiveConnections;
-
