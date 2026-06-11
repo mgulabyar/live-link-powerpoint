@@ -1089,108 +1089,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     return base64String;
   };
 
-  // const handleRefreshLink = async (item: PPTLinkedItem) => {
-  //   setRefreshingId(item.id);
-  //   setAlertMessage(null);
-
-  //   try {
-  //     const response = await getLinkDetails(item.id);
-  //     if (!response.success || !response.data) {
-  //       throw new Error("Connection data not found in database.");
-  //     }
-
-  //     const linkData = response.data;
-  //     const rawBase64 = getRawBase64(linkData.dataSnapshot);
-  //     let shapeUpdated = false;
-
-  //     await PowerPoint.run(async (context: any) => {
-  //       // FIXED: Loads ALL slides to scan across the entire presentation [1]
-  //       const slides = context.presentation.slides;
-  //       slides.load("items/id");
-  //       await context.sync();
-
-  //       for (const slide of slides.items) {
-  //         const shapes = slide.shapes;
-  //         shapes.load("items/id");
-  //         await context.sync();
-
-  //         const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
-  //         if (targetShape) {
-  //           targetShape.load(["left", "top"]);
-  //           await context.sync();
-
-  //           const targetShapeProperties = {
-  //             left: targetShape.left,
-  //             top: targetShape.top,
-  //           };
-
-  //           // FIXED: Programmatically navigates to the target slide first to guarantee precise insertion [1]
-  //           await new Promise<void>((resolve, reject) => {
-  //             Office.context.document.goToByIdAsync(slide.id, Office.GoToType.Slide, (res: any) => {
-  //               if (res.status === Office.AsyncResultStatus.Failed) reject(new Error(res.error.message));
-  //               else resolve();
-  //             });
-  //           });
-
-  //           const existingIds = new Set(shapes.items.map((s: any) => s.id));
-
-  //           targetShape.delete();
-  //           await context.sync();
-
-  //           await new Promise<void>((resolve, reject) => {
-  //             Office.context.document.setSelectedDataAsync(
-  //               rawBase64,
-  //               { coercionType: Office.CoercionType.Image },
-  //               (asyncResult: any) => {
-  //                 if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-  //                   reject(new Error(""));
-  //                 } else {
-  //                   resolve();
-  //                 }
-  //               }
-  //             );
-  //           });
-
-  //           const updatedShapes = slide.shapes;
-  //           updatedShapes.load("items/id");
-  //           await context.sync();
-
-  //           const newImage = updatedShapes.items.find((s: any) => !existingIds.has(s.id));
-  //           if (newImage) {
-  //             newImage.left = targetShapeProperties.left;
-  //             newImage.top = targetShapeProperties.top;
-
-  //             newImage.tags.add("LIVE_LINK_ID", item.id);
-  //             newImage.tags.add("EXCEL_FILE_ID", item.excelFileId);
-  //             newImage.tags.add("EXCEL_FILE_NAME", item.excelFileName);
-  //             newImage.tags.add("EXCEL_SHEET_NAME", item.sheetName);
-  //             newImage.tags.add("EXCEL_RANGE_ADDRESS", item.rangeAddress);
-  //             newImage.tags.add("TYPE", item.type);
-
-  //             await context.sync();
-  //             shapeUpdated = true;
-  //             break;
-  //           } else {
-  //             throw new Error("Failed to detect refreshed shape.");
-  //           }
-  //         }
-  //       }
-  //     });
-
-  //     if (shapeUpdated) {
-  //       setAlertMessage({ text: "Updated successfully!", severity: "success" });
-  //       onLinkSuccess();
-  //     } else {
-  //       console.warn("[SILENT EXCEL SYNC] Linked shape was already deleted from slide.");
-  //     }
-  //   } catch (err: any) {
-  //     console.error(err);
-  //     setAlertMessage({ text: err.message || "Failed to update connection.", severity: "error" });
-  //   } finally {
-  //     setRefreshingId(null);
-  //   }
-  // };
-
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
@@ -1205,48 +1103,13 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       const rawBase64 = getRawBase64(linkData.dataSnapshot);
       let shapeUpdated = false;
 
-      // --- STEP 1: Pehle sirf Slide ID dhoondain (Bina switch kiye) ---
-      let foundSlideId: string | null = null;
       await PowerPoint.run(async (context: any) => {
+        // FIXED: Loads ALL slides to scan across the entire presentation [1]
         const slides = context.presentation.slides;
         slides.load("items/id");
         await context.sync();
 
         for (const slide of slides.items) {
-          const shapes = slide.shapes;
-          shapes.load("items/id");
-          await context.sync();
-
-          const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
-          if (targetShape) {
-            foundSlideId = slide.id;
-            break; 
-          }
-        }
-      });
-
-      // Agar shape kisi bhi slide par nahi mili
-      if (!foundSlideId) {
-        throw new Error("Linked shape not found on any slide.");
-      }
-
-      // --- STEP 2: PowerPoint.run se BAHAR switch/navigate karein ---
-      await new Promise<void>((resolve, reject) => {
-        Office.context.document.goToByIdAsync(foundSlideId!, Office.GoToType.Slide, (res: any) => {
-          if (res.status === Office.AsyncResultStatus.Failed) reject(new Error(res.error.message));
-          else resolve();
-        });
-      });
-
-      // --- STEP 3: Sahi slide par pohnchne ke baad baaki ka saara kaam (Aapka original logic) ---
-      await PowerPoint.run(async (context: any) => {
-        const slides = context.presentation.slides;
-        slides.load("items/id");
-        await context.sync();
-
-        // Ab hum exact usi slide par kaam karenge jahan hum switch karke aaye hain
-        const slide = slides.items.find((s: any) => s.id === foundSlideId);
-        if (slide) {
           const shapes = slide.shapes;
           shapes.load("items/id");
           await context.sync();
@@ -1261,6 +1124,14 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               top: targetShape.top,
             };
 
+            // FIXED: Programmatically navigates to the target slide first to guarantee precise insertion [1]
+            await new Promise<void>((resolve, reject) => {
+              Office.context.document.goToByIdAsync(slide.id, Office.GoToType.Slide, (res: any) => {
+                if (res.status === Office.AsyncResultStatus.Failed) reject(new Error(res.error.message));
+                else resolve();
+              });
+            });
+
             const existingIds = new Set(shapes.items.map((s: any) => s.id));
 
             targetShape.delete();
@@ -1272,7 +1143,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
                 { coercionType: Office.CoercionType.Image },
                 (asyncResult: any) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
-                    reject(new Error("Image insertion failed."));
+                    reject(new Error(""));
                   } else {
                     resolve();
                   }
@@ -1298,6 +1169,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
               await context.sync();
               shapeUpdated = true;
+              break;
             } else {
               throw new Error("Failed to detect refreshed shape.");
             }
@@ -1318,6 +1190,8 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       setRefreshingId(null);
     }
   };
+
+ 
 
 
   const handleUpdateAllLinks = async () => {
