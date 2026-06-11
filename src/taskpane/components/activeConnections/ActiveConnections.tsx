@@ -1088,13 +1088,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
     return base64String;
   };
 
-  // UPDATED: Dynamic slide navigation, current position lock, and silent error handler
   const handleRefreshLink = async (item: PPTLinkedItem) => {
     setRefreshingId(item.id);
     setAlertMessage(null);
 
     try {
-      // 1. Inactive slide se active slide par switch karna (Slide jumping fix)
+      // 1. Inactive slide se active slide par switch karna (Slide jumping focus lock) [1]
       if (item.slideId) {
         await new Promise<void>((resolve) => {
           Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
@@ -1113,11 +1112,11 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       let shapeUpdated = false;
 
       await PowerPoint.run(async (context: any) => {
+        // FIXED: Loads presentation.slides instead of getSelectedSlides to scan across all slides [1]
         const slides = context.presentation.slides;
         slides.load("items");
         await context.sync();
 
-        // Target slide locate karna
         const targetSlide = slides.items.find((s: any) => s.id === item.slideId);
         if (targetSlide) {
           const shapes = targetSlide.shapes;
@@ -1126,7 +1125,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
           const targetShape = shapes.items.find((s: any) => s.id === item.shapeId);
           if (targetShape) {
-            // Live size aur position coordinates load karna taake corner drag lock ho sake
+            // Live size aur coordinates load karna taake update karne par size aur position lock rahe [1]
             targetShape.load(["left", "top", "width", "height"]);
             await context.sync();
 
@@ -1139,11 +1138,9 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
 
             const existingIds = new Set(shapes.items.map((s: any) => s.id));
 
-            // Shape delete karna
             targetShape.delete();
             await context.sync();
 
-            // 2. Clear focus conflict: PowerPoint Online selection canvas par reset karna
             if (item.slideId) {
               await new Promise<void>((resolve) => {
                 Office.context.document.goToByIdAsync(item.slideId, Office.GoToType.Slide, () => {
@@ -1152,7 +1149,6 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
               });
             }
 
-            // Options mein size aur positions inject karna
             const insertOptions = {
               coercionType: Office.CoercionType.Image,
               imageLeft: targetShapeProperties.left,
@@ -1164,7 +1160,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
             await new Promise<void>((resolve, reject) => {
               Office.context.document.setSelectedDataAsync(
                 rawBase64,
-                insertOptions, // Exact properties mapping
+                insertOptions, 
                 (asyncResult: any) => {
                   if (asyncResult.status === Office.AsyncResultStatus.Failed) {
                     reject(new Error(""));
@@ -1207,14 +1203,12 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         onLinkSuccess();
       }
     } catch (err: any) {
-      // "or ye toast jo error waly aty ha ye khatam kro" - Error alerts ko UI par show karna band kar diya hai
       console.log("[SILENT HANDLER] Refresh failed silently:", err.message || err);
     } finally {
       setRefreshingId(null);
     }
   };
 
-  // UPDATED: Bulk Update (Update All) with slide selection reset, coordinates lock, and silent errors
   const handleUpdateAllLinks = async () => {
     if (safePptLinks.length === 0) return;
     setGlobalUpdating(true);
@@ -1234,6 +1228,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
       });
 
       await PowerPoint.run(async (context: any) => {
+        // FIXED: Loads presentation.slides instead of getSelectedSlides to scan across all slides [1]
         const slides = context.presentation.slides;
         slides.load("items");
         await context.sync();
@@ -1570,6 +1565,7 @@ const ActiveConnections: React.FC<ActiveConnectionsProps> = ({ pptLinks, onLinkS
         </List>
       )}
 
+      {/* DYNAMIC AUTO-DISSOLVING 2-SECOND BOTTOM TOAST [1] */}
       <Snackbar
         open={alertMessage !== null}
         autoHideDuration={2000} 
